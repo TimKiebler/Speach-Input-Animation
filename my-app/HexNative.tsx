@@ -207,6 +207,9 @@ type GLResources = {
   size: { width: number; height: number };
 };
 
+const ROTATION_ACTIVE_SPEED = 0.2;
+const ROTATION_IDLE_SPEED = 0.04;
+
 const HexNative: React.FC = () => {
   const resourcesRef = useRef<GLResources | null>(null);
 
@@ -333,7 +336,7 @@ const HexNative: React.FC = () => {
       hoverValue: 0,
       targetHover: 0,
       rotation: 0,
-      lastFrameTime: Date.now(),
+      lastFrameTime: 0,
       size: { width: gl.drawingBufferWidth, height: gl.drawingBufferHeight },
     };
     resourcesRef.current = resources;
@@ -364,12 +367,15 @@ const HexNative: React.FC = () => {
 
       context.viewport(0, 0, drawingWidth, drawingHeight);
 
-      const delta = (time - ref.lastFrameTime) * 0.001;
+      const delta = ref.lastFrameTime === 0 ? 0 : (time - ref.lastFrameTime) * 0.001;
       ref.lastFrameTime = time;
 
       ref.hoverValue += (ref.targetHover - ref.hoverValue) * 0.1;
-      if (ref.targetHover > 0.5) {
-        ref.rotation += delta * 0.35;
+      
+      if (ref.targetHover > 0.0) {
+        ref.rotation += delta * ROTATION_ACTIVE_SPEED;
+      } else {
+        ref.rotation += delta * ROTATION_IDLE_SPEED;
       }
 
       context.useProgram(prog);
@@ -421,13 +427,6 @@ const HexNative: React.FC = () => {
           }}
           resizeMode="cover"
         />
-        <View style={styles.hintContainer} pointerEvents="none">
-          <View style={styles.hintBadge}>
-            <View style={styles.hintDot} />
-            <View style={styles.hintLine} />
-            <Text style={styles.hintText}>Move across the hexagon</Text>
-          </View>
-        </View>
         <View style={StyleSheet.absoluteFill}>
           <View style={styles.glContainer} {...responderProps} onLayout={onLayout}>
             <GLView

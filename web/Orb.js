@@ -1,8 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Triangle, Vec3 } from 'ogl';
 
+const ROTATION_ACTIVE_SPEED = 0.35;
+const ROTATION_IDLE_SPEED = 0.08;
+
 export default function Orb({ hue = 0, hoverIntensity = 0.2, rotateOnHover = true, forceHoverState = false }) {
-  const ctnDom = useRef(null);
+  const stageRef = useRef(null);
 
   const vert = /* glsl */ `
     precision highp float;
@@ -163,7 +166,7 @@ export default function Orb({ hue = 0, hoverIntensity = 0.2, rotateOnHover = tru
   `;
 
   useEffect(() => {
-    const container = ctnDom.current;
+    const container = stageRef.current;
     if (!container) return;
 
     const renderer = new Renderer({ alpha: true, premultipliedAlpha: false });
@@ -193,82 +196,82 @@ export default function Orb({ hue = 0, hoverIntensity = 0.2, rotateOnHover = tru
       if (!container) return;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       renderer.dpr = dpr;
-      const width = container.clientWidth;
-      const height = container.clientHeight;
+      const width = container.clientWidth || 1;
+      const height = container.clientHeight || 1;
       renderer.setSize(width, height);
       gl.canvas.style.width = width + 'px';
       gl.canvas.style.height = height + 'px';
       gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-      program.uniforms.iResolution.value.set(gl.canvas.width, gl.canvas.height, gl.canvas.width / gl.canvas.height);
+      program.uniforms.iResolution.value.set(
+        gl.canvas.width,
+        gl.canvas.height,
+        gl.canvas.width / Math.max(gl.canvas.height, 1),
+      );
     }
     window.addEventListener('resize', resize);
     resize();
 
-    let targetHover = 0;
+    let targetHover = forceHoverState ? 1 : 0;
     let lastTime = 0;
     let currentRot = 0;
-    const rotationSpeed = 0.3;
 
     const updateHover = (clientX, clientY) => {
+      if (forceHoverState) {
+        targetHover = 1;
+        return;
+      }
       const rect = container.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-      const width = rect.width;
-      const height = rect.height;
-      const size = Math.min(width, height);
+      const width = rect.width || 1;
+      const height = rect.height || 1;
+      const size = Math.max(Math.min(width, height), 1);
       const centerX = width / 2;
       const centerY = height / 2;
-      const uvX = ((x - centerX) / size) * 2.0;
-      const uvY = ((y - centerY) / size) * 2.0;
+      const uvX = ((clientX - rect.left - centerX) / size) * 2.0;
+      const uvY = ((clientY - rect.top - centerY) / size) * 2.0;
+      targetHover = Math.sqrt(uvX * uvX + uvY * uvY) < 0.8 ? 1 : 0;
+    };
 
-      if (Math.sqrt(uvX * uvX + uvY * uvY) < 0.8) {
-        targetHover = 1;
-      } else {
+    const handlePointerMove = (event) => updateHover(event.clientX, event.clientY);
+    const handleMouseMove = (event) => updateHover(event.clientX, event.clientY);
+    const handleTouchMove = (event) => {
+      const touch = event.touches[0];
+      if (touch) updateHover(touch.clientX, touch.clientY);
+    };
+    const resetHover = () => {
+      if (!forceHoverState) {
         targetHover = 0;
       }
     };
 
-    const handleMouseMove = e => {
-      updateHover(e.clientX, e.clientY);
-    };
-
-    const handleTouchMove = e => {
-      const touch = e.touches[0];
-      if (touch) {
-        updateHover(touch.clientX, touch.clientY);
-      }
-    };
-
-    const handleMouseLeave = () => {
-      targetHover = 0;
-    };
-
-    const usePointer = typeof window !== 'undefined' && 'onpointermove' in window;
-    if (usePointer) {
-      container.addEventListener('pointermove', handleMouseMove, { passive: true });
-      container.addEventListener('pointerleave', handleMouseLeave);
+    const supportsPointer = typeof window !== 'undefined' && 'onpointermove' in window;
+    if (supportsPointer) {
+      container.addEventListener('pointermove', handlePointerMove, { passive: true });
+      container.addEventListener('pointerleave', resetHover);
+      container.addEventListener('pointercancel', resetHover);
     } else {
       container.addEventListener('mousemove', handleMouseMove, { passive: true });
-      container.addEventListener('mouseleave', handleMouseLeave);
+      container.addEventListener('mouseleave', resetHover);
       container.addEventListener('touchmove', handleTouchMove, { passive: true });
-      container.addEventListener('touchend', handleMouseLeave);
+      container.addEventListener('touchend', resetHover);
+      container.addEventListener('touchcancel', resetHover);
     }
 
     let rafId;
-    const update = t => {
+    const update = (time) => {
       rafId = requestAnimationFrame(update);
-      const dt = (t - lastTime) * 0.001;
-      lastTime = t;
-      program.uniforms.iTime.value = t * 0.001;
+      const delta = lastTime === 0 ? 0 : (time - lastTime) * 0.001;
+      lastTime = time;
+
+      program.uniforms.iTime.value = time * 0.001;
       program.uniforms.hue.value = hue;
       program.uniforms.hoverIntensity.value = hoverIntensity;
 
       const effectiveHover = forceHoverState ? 1 : targetHover;
       program.uniforms.hover.value += (effectiveHover - program.uniforms.hover.value) * 0.1;
 
-      if (rotateOnHover && effectiveHover > 0.5) {
-        currentRot += dt * rotationSpeed;
-      }
+      const rotationSpeed =
+        rotateOnHover && effectiveHover > 0.5 ? ROTATION_ACTIVE_SPEED : ROTATION_IDLE_SPEED;
+      currentRot += delta * rotationSpeed;
       program.uniforms.rot.value = currentRot;
 
       renderer.render({ scene: mesh });
@@ -278,14 +281,16 @@ export default function Orb({ hue = 0, hoverIntensity = 0.2, rotateOnHover = tru
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener('resize', resize);
-      if (usePointer) {
-        container.removeEventListener('pointermove', handleMouseMove);
-        container.removeEventListener('pointerleave', handleMouseLeave);
+      if (supportsPointer) {
+        container.removeEventListener('pointermove', handlePointerMove);
+        container.removeEventListener('pointerleave', resetHover);
+        container.removeEventListener('pointercancel', resetHover);
       } else {
         container.removeEventListener('mousemove', handleMouseMove);
-        container.removeEventListener('mouseleave', handleMouseLeave);
+        container.removeEventListener('mouseleave', resetHover);
         container.removeEventListener('touchmove', handleTouchMove);
-        container.removeEventListener('touchend', handleMouseLeave);
+        container.removeEventListener('touchend', resetHover);
+        container.removeEventListener('touchcancel', resetHover);
       }
       container.removeChild(gl.canvas);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
@@ -293,5 +298,9 @@ export default function Orb({ hue = 0, hoverIntensity = 0.2, rotateOnHover = tru
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hue, hoverIntensity, rotateOnHover, forceHoverState]);
 
-  return React.createElement('div', { ref: ctnDom, className: 'orb-container' });
+  return React.createElement(
+    'div',
+    { className: 'gl-stage' },
+    React.createElement('div', { ref: stageRef, className: 'gl-surface' }),
+  );
 }
