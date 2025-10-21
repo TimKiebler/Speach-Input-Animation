@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orb Background Demo</title>
+    <link rel="stylesheet" href="./Orb.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #050014;
+      }
+    </style>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.3.1",
+          "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+          "ogl": "https://esm.sh/ogl@0.0.105"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root" class="root"></div>
+
+    <script type="module">
+      import React from 'react';
+      import { createRoot } from 'react-dom/client';
+      import Orb from './Orb.js';
+      import Hex from './Hex.js';
+
+      const toggleBarStyle = {
+        position: 'absolute',
+        top: '1.2rem',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        display: 'flex',
+        gap: '0.5rem',
+        zIndex: 5,
+      };
+
+      const buttonStyle = (active) => ({
+        appearance: 'none',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        background: active
+          ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.95), rgba(24, 47, 255, 0.6))'
+          : 'rgba(9, 4, 24, 0.55)',
+        color: 'rgba(240, 244, 255, 0.9)',
+        borderRadius: '999px',
+        padding: '0.6rem 1.2rem',
+        fontSize: '0.8rem',
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase',
+        cursor: 'pointer',
+        boxShadow: active
+          ? '0 18px 40px rgba(64, 32, 160, 0.45)'
+          : '0 12px 28px rgba(0, 0, 0, 0.35)',
+        backdropFilter: 'blur(22px)',
+        transition: 'all 0.24s ease',
+      });
+
+      const App = () => {
+        const [mode, setMode] = React.useState('orb');
+
+        return React.createElement(
+          'div',
+          { className: 'orb-wrapper' },
+          React.createElement(
+            'div',
+            { style: toggleBarStyle },
+            React.createElement(
+              'button',
+              { style: buttonStyle(mode === 'orb'), onClick: () => setMode('orb') },
+              'Circle'
+            ),
+            React.createElement(
+              'button',
+              { style: buttonStyle(mode === 'hex'), onClick: () => setMode('hex') },
+              'Hexagon'
+            )
+          ),
+          React.createElement(mode === 'orb' ? Orb : Hex, {
+            hoverIntensity: 1,
+            rotateOnHover: true,
+            hue: 0,
+            forceHoverState: false,
+          }),
+          React.createElement(
+            'span',
+            { className: 'orb-hint' },
+            `Move pointer across the ${mode === 'orb' ? 'orb' : 'hexagon'}`
+          )
+        );
+      };
+
+      const container = document.getElementById('root');
+      createRoot(container).render(React.createElement(App));
+    </script>
+  </body>
+</html>
