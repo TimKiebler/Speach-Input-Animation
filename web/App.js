@@ -15,11 +15,22 @@ const ToggleButton = ({ label, active, onPress }) =>
 
 export default function App() {
   const [mode, setMode] = React.useState('orb');
+  const [resolution, setResolution] = React.useState({ width: 0, height: 0, dpr: 1 });
+  const handleResolution = React.useCallback((info) => {
+    setResolution(info);
+  }, []);
+  const resolutionLabel =
+    resolution.width && resolution.height
+      ? `${resolution.width} × ${resolution.height} @ ${resolution.dpr.toFixed(2)}x`
+      : '';
   const ActiveComponent = mode === 'orb' ? Orb : Hex;
 
   return React.createElement(
     'div',
     { className: 'scene' },
+    resolutionLabel
+      ? React.createElement('div', { className: 'meta' }, `Resolution: ${resolutionLabel}`)
+      : null,
     React.createElement(
       'div',
       { className: 'toggle-bar' },
@@ -44,6 +55,7 @@ export default function App() {
         hue: 0,
         hoverIntensity: 1,
         rotateOnHover: true,
+        onResolutionChange: handleResolution,
       }),
     ),
     React.createElement('div', { className: 'noise-layer', 'aria-hidden': 'true' }),

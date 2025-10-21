@@ -9,6 +9,7 @@ export default function Hex({
   hoverIntensity = 0.2,
   rotateOnHover = true,
   forceHoverState = false,
+  onResolutionChange,
 }) {
   const stageRef = useRef(null);
 
@@ -236,6 +237,9 @@ export default function Hex({
         gl.canvas.height,
         gl.canvas.width / Math.max(gl.canvas.height, 1),
       );
+      if (typeof onResolutionChange === 'function') {
+        onResolutionChange({ width: gl.canvas.width, height: gl.canvas.height, dpr });
+      }
     }
 
     window.addEventListener('resize', resize);
@@ -327,7 +331,7 @@ export default function Hex({
       container.removeChild(gl.canvas);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
-  }, [forceHoverState, hoverIntensity, hue, rotateOnHover]);
+  }, [forceHoverState, hoverIntensity, hue, rotateOnHover, onResolutionChange]);
 
   return React.createElement(
     'div',

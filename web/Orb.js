@@ -4,7 +4,13 @@ import { Renderer, Program, Mesh, Triangle, Vec3 } from 'ogl';
 const ROTATION_ACTIVE_SPEED = 0.35;
 const ROTATION_IDLE_SPEED = 0.08;
 
-export default function Orb({ hue = 0, hoverIntensity = 0.2, rotateOnHover = true, forceHoverState = false }) {
+export default function Orb({
+  hue = 0,
+  hoverIntensity = 0.2,
+  rotateOnHover = true,
+  forceHoverState = false,
+  onResolutionChange,
+}) {
   const stageRef = useRef(null);
 
   const vert = /* glsl */ `
@@ -207,6 +213,9 @@ export default function Orb({ hue = 0, hoverIntensity = 0.2, rotateOnHover = tru
         gl.canvas.height,
         gl.canvas.width / Math.max(gl.canvas.height, 1),
       );
+      if (typeof onResolutionChange === 'function') {
+        onResolutionChange({ width: gl.canvas.width, height: gl.canvas.height, dpr });
+      }
     }
     window.addEventListener('resize', resize);
     resize();
@@ -295,8 +304,7 @@ export default function Orb({ hue = 0, hoverIntensity = 0.2, rotateOnHover = tru
       container.removeChild(gl.canvas);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hue, hoverIntensity, rotateOnHover, forceHoverState]);
+  }, [hue, hoverIntensity, rotateOnHover, forceHoverState, onResolutionChange]);
 
   return React.createElement(
     'div',
