@@ -102,9 +102,9 @@ export default function Hex({
       return vec4(colorIn.rgb / (a + 1e-5), a);
     }
 
-    const vec3 baseColor1 = vec3(0.611765, 0.262745, 0.996078);
-    const vec3 baseColor2 = vec3(0.298039, 0.760784, 0.913725);
-    const vec3 baseColor3 = vec3(0.062745, 0.078431, 0.600000);
+    const vec3 baseColor1 = vec3(0.078431, 0.905882, 0.972549);
+    const vec3 baseColor2 = vec3(0.000000, 0.666667, 0.870588);
+    const vec3 baseColor3 = vec3(0.000000, 0.215686, 0.341176);
     const float innerRadius = 0.58;
     const float noiseScale = 0.65;
 
@@ -163,6 +163,7 @@ export default function Hex({
 
       float rim = smoothstep(0.92, 0.98, len) - smoothstep(0.98, 1.05, len);
       float rimHighlight = max(rim, 0.0);
+      //col += vec3(0.0, 0.98, 0.98) * pow(rimHighlight, 1.6);
       col += vec3(0.55, 0.32, 0.82) * pow(rimHighlight, 1.6);
 
       float hexMask = 1.0 - smoothstep(1.0, 1.06, len);

@@ -14,7 +14,7 @@ const ToggleButton = ({ label, active, onPress }) =>
   );
 
 export default function App() {
-  const [mode, setMode] = React.useState('orb');
+  const [mode, setMode] = React.useState('hex');
   const [resolution, setResolution] = React.useState({ width: 0, height: 0, dpr: 1 });
   const handleResolution = React.useCallback((info) => {
     setResolution(info);
